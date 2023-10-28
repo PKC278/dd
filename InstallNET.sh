@@ -14,7 +14,7 @@ export tmpMirror=''
 export ipAddr=''
 export ipMask=''
 export ipGate=''
-export ipDNS='8.8.8.8'
+export ipDNS=''
 export IncDisk='default'
 export interface=''
 export interfaceSelect=''
@@ -294,13 +294,14 @@ if [[ "$ddMode" == '1' ]]; then
   tmpVER='amd64';
 fi
 
-[ -n "$ipAddr" ] && [ -n "$ipMask" ] && [ -n "$ipGate" ] && setNet='1';
+[ -n "$ipAddr" ] && [ -n "$ipMask" ] && [ -n "$ipGate" ] && [ -n "$ipDNS" ] && setNet='1';
 if [ "$setNet" == "0" ]; then
   dependence ip
   [ -n "$interface" ] || interface=`getInterface`
   iAddr=`ip addr show dev $interface |grep "inet.*" |head -n1 |grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[0-9]\{1,2\}'`
   ipAddr=`echo ${iAddr} |cut -d'/' -f1`
   ipMask=`netmask $(echo ${iAddr} |cut -d'/' -f2)`
+  ipDNS=`grep 'nameserver' /etc/resolv.conf | awk 'NR==1 {print $2}'`
   ipGate=`ip route show default |grep "^default" |grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' |head -n1`
 fi
 if [ -z "$interface" ]; then

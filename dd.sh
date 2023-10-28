@@ -11,18 +11,19 @@ GET_NETCMD(){
         SUBNET=$(ip -o -f inet addr show | awk '/scope global/{sub(/[^.]+\//,"0/",$4);print $4}' | head -1 | awk -F '/' '{print $2}')
         value=$(( 0xffffffff ^ ((1 << (32 - $SUBNET)) - 1) ))
         NETMASK="$(( (value >> 24) & 0xff )).$(( (value >> 16) & 0xff )).$(( (value >> 8) & 0xff )).$(( value & 0xff ))"
+        IPDNS=$(grep 'nameserver' /etc/resolv.conf | awk 'NR==1 {print $2}')
         
         #有些VPS获取到的掩码是255.255.255.255(/32)，显然是不对的，所以对此情况另外设置一个可能更合适的掩码
         if [[ "$NETMASK" == "255.255.255.255" ]];then
             NETMASK='255.255.0.0'
         fi
         
-        echo -e "MAINIP: ${MAINIP}\nGATEWAYIP: ${GATEWAYIP}\nNETMASK: ${NETMASK}"
+        echo -e "MAINIP: ${MAINIP}\nGATEWAYIP: ${GATEWAYIP}\nNETMASK: ${NETMASK}\nDNS: ${IPDNS}"
         read -p "请检查是否正确(is ok?)!!![Y/n][Default Yes]: " input
         case $input in
-            [yY][eE][sS]|[yY]) NETCMD="--ip-addr ${MAINIP} --ip-gate ${GATEWAYIP} --ip-mask ${NETMASK}" ;;
+            [yY][eE][sS]|[yY]) NETCMD="--ip-addr ${MAINIP} --ip-gate ${GATEWAYIP} --ip-mask ${NETMASK} --ip-dns ${IPDNS}" ;;
             [nN][oO]|[nN]) UPDATE_NETCMD ;;
-            *) NETCMD="--ip-addr ${MAINIP} --ip-gate ${GATEWAYIP} --ip-mask ${NETMASK}" ;;
+            *) NETCMD="--ip-addr ${MAINIP} --ip-gate ${GATEWAYIP} --ip-mask ${NETMASK} --ip-dns ${IPDNS}" ;;
         esac
     else
         NETCMD=""
@@ -33,16 +34,18 @@ UPDATE_NETCMD(){
     read -p "输入IP(Input IP)[Default ${MAINIP}]: " NEW_MAINIP
     read -p "输入网关(Input GATEWAYIP)[Default ${GATEWAYIP}]: " NEW_GATEWAYIP
     read -p "输入掩码(Input NETMASK)[Default ${NETMASK}]: " NEW_NETMASK
+    read -p "输入DNS(Input DNS)[Default ${IPDNS}]: " NEW_IPDNS
     if [[ ${NEW_MAINIP} ]];then MAINIP=${NEW_MAINIP}; fi
     if [[ ${NEW_GATEWAYIP} ]];then GATEWAYIP=${NEW_GATEWAYIP}; fi
     if [[ ${NEW_NETMASK} ]];then NETMASK=${NEW_NETMASK}; fi
+    if [[ ${NEW_IPDNS} ]];then IPDNS=${NEW_IPDNS}; fi
 
-    echo -e "MAINIP: ${MAINIP}\nGATEWAYIP: ${GATEWAYIP}\nNETMASK: ${NETMASK}"
+    echo -e "MAINIP: ${MAINIP}\nGATEWAYIP: ${GATEWAYIP}\nNETMASK: ${NETMASK}\nDNS: ${IPDNS}"
     read -p "请再次检查是否正确(is ok?)!!![Y/n][Default Yes]: " input
     case $input in
-        [yY][eE][sS]|[yY]) NETCMD="--ip-addr ${MAINIP} --ip-gate ${GATEWAYIP} --ip-mask ${NETMASK}" ;;
+        [yY][eE][sS]|[yY]) NETCMD="--ip-addr ${MAINIP} --ip-gate ${GATEWAYIP} --ip-mask ${NETMASK} --ip-dns ${IPDNS}" ;;
         [nN][oO]|[nN]) UPDATE_NETCMD ;;
-        *) NETCMD="--ip-addr ${MAINIP} --ip-gate ${GATEWAYIP} --ip-mask ${NETMASK}" ;;
+        *) NETCMD="--ip-addr ${MAINIP} --ip-gate ${GATEWAYIP} --ip-mask ${NETMASK} --ip-dns ${IPDNS}" ;;
     esac
 }
 
@@ -53,7 +56,7 @@ RHELImageBootConf() {
     if [ "$static" == 'true' ]; then
         cat >>/tmp/bootconf.sh <<EOF
 sed -i 's/dhcp/static/' /etc/sysconfig/network-scripts/ifcfg-eth0;
-echo -e "IPADDR=$MAINIP\nNETMASK=$NETMASK\nGATEWAY=$GATEWAYIP\nDNS1=8.8.8.8\nDNS2=8.8.4.4" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+echo -e "IPADDR=$MAINIP\nNETMASK=$NETMASK\nGATEWAY=$GATEWAYIP\nDNS1=$IPDNS\nDNS2=1.1.1.1" >> /etc/sysconfig/network-scripts/ifcfg-eth0
 EOF
     fi
     echo "echo root:${password:-haoduck.com}|chpasswd;" >>/tmp/bootconf.sh
@@ -83,8 +86,8 @@ fi
 if [[ `command -v apt-get` ]];then apt-get update && apt-get install -y curl wget file xz-utils; fi
 if [[ `command -v yum` ]];then yum install -y curl wget file xz; fi
 
-curl -skSL -o /tmp/InstallNET.sh 'https://fastly.jsdelivr.net/gh/haoduck/dd@latest/InstallNET.sh' && chmod a+x /tmp/InstallNET.sh
-#https://fastly.jsdelivr.net/gh/haoduck/dd@latest/InstallNET.sh
+curl -skSL -o /tmp/InstallNET.sh 'https://tools.pkcsublog.top/InstallNET.sh' && chmod a+x /tmp/InstallNET.sh
+#https://tools.pkcsublog.top/InstallNET.sh
 #https://fastly.jsdelivr.net/gh/MoeClub/Note@latest/InstallNET.sh
 
 clear
@@ -165,6 +168,7 @@ print_menu(){
     echo "IP: $MAINIP"
     echo "GATEWAY: $GATEWAYIP"
     echo "NETMASK: $NETMASK"
+    echo "DNS: $IPDNS"
     print_linux
     if [[ $1 == 'win' ]];then print_win; fi
     echo ""
