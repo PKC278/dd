@@ -13,10 +13,6 @@
 curl -sSL -k -o dd.sh https://raw.githubusercontent.com/PKC278/dd/master/dd.sh && chmod +x dd.sh && bash dd.sh
 ```
 
-```
-curl -sSL -k -o dd.sh https://tools.pkcsublog.top/dd.sh && chmod +x dd.sh && bash dd.sh
-```
-
 ## Tip
 
 谷歌云GCP使用时需要把掩码手动改为255.255.255.0
